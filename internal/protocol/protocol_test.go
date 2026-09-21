@@ -363,6 +363,18 @@ func TestCodeOfClassifiesErrors(t *testing.T) {
 		{context.Canceled, CodeCanceled},
 		{fmt.Errorf("包一层: %w", context.DeadlineExceeded), CodeTimeout},
 		{errors.New("随便一个错"), CodeInternal},
+		// 取消打断在途请求后被服务层就地包装（e2e 实测踩过的坑）：
+		// cancel 打断下载中的 HTTP 请求，download_helpers 会把它包成
+		// not_found —— 但宿主要看到的是 canceled，不是 not_found。
+		{
+			Wrap(CodeNotFound,
+				fmt.Errorf("包一层: %w",
+					Wrap(CodeIO, &fakeNetwork{Err: context.Canceled}, "请求 x 失败")),
+				"获取作品 1472136 详情失败"),
+			CodeCanceled,
+		},
+		// 对照组：非取消的底层原因维持钉死的业务码
+		{Wrap(CodeNotFound, &fakeNetwork{Err: errors.New("dns 炸了")}, "获取详情失败"), CodeNotFound},
 	}
 	for _, c := range cases {
 		if got := CodeOf(c.err); got != c.want {
@@ -383,6 +395,13 @@ type fakeCoded struct{ code string }
 
 func (e *fakeCoded) Error() string     { return "假错误" }
 func (e *fakeCoded) ErrorCode() string { return e.code }
+
+// fakeNetwork 模拟 client.NetworkError 的形状（Unwrap 到底层原因）。
+// protocol 包不能 import client（会循环），所以本地造一个等价物。
+type fakeNetwork struct{ Err error }
+
+func (e *fakeNetwork) Error() string { return "请求 somewhere 失败: " + e.Err.Error() }
+func (e *fakeNetwork) Unwrap() error { return e.Err }
 
 // TestRequestDecodeParamsNil 确认 params 缺省或为 null 时置零值而不报错。
 //

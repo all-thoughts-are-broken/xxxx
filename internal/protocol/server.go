@@ -249,6 +249,14 @@ func (s *Server) Run(ctx context.Context) error {
 func (s *Server) handleControl(req Request) bool {
 	switch req.Cmd {
 	case "cancel":
+		// 契约（宿主桥必须遵守，e2e 实测踩过）：
+		//  - cancel 请求自身的 task_id 就是要取消的目标（数字 = 精确取消），
+		//    响应以同一个 task_id 回来；
+		//  - task_id **省略或 null** = 全部取消（TaskID.IsZero 判 null 不判
+		//    数字 0 —— 发 0 会被当普通 id 精确匹配，永远查不到）；
+		//  - 全取消的响应帧**不带 task_id 字段**（零值 TaskID 序列化时被
+		//    taskIDPtr 置掉），宿主桥要靠「无 task_id 且 result.canceled
+		//    为数字」来识别它，不能走常规的按 id 匹配路由。
 		n := s.cancel(req.TaskID)
 		s.emitResult(req.TaskID, map[string]any{"canceled": n})
 		return true

@@ -81,9 +81,19 @@ type Coded interface {
 }
 
 // CodeOf 返回错误码。未标注错误码的错误会按 ctx 错误做一次归类，其余归为 internal。
+//
+// 取消优先于一切钉死的业务码：宿主取消任务时，ctx.Canceled 会顺着错误链
+// 传到任何一个在途环节（比如打断一条进行中的 HTTP 请求），该环节的服务层
+// 会就地把中断包成 not_found / network 等业务码 —— 那只是取消的**副作用**，
+// 宿主此刻真正需要知道的原因是 canceled。DeadlineExceeded 不享受这个待遇：
+// http.Client.Timeout 触发的超时也会表现成 DeadlineExceeded，那属于网络层
+// 问题（NetworkError 包着，归 network），不能和任务级 timeout 混淆。
 func CodeOf(err error) string {
 	if err == nil {
 		return ""
+	}
+	if errors.Is(err, context.Canceled) {
+		return CodeCanceled
 	}
 	var ce *CodedError
 	if errors.As(err, &ce) && ce.Code != "" {
@@ -96,8 +106,6 @@ func CodeOf(err error) string {
 		}
 	}
 	switch {
-	case errors.Is(err, context.Canceled):
-		return CodeCanceled
 	case errors.Is(err, context.DeadlineExceeded):
 		return CodeTimeout
 	default:
