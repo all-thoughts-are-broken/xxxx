@@ -83,6 +83,14 @@ type Config struct {
 	SkipExisting bool   `json:"skip_existing"` // 已存在且非空的文件直接跳过（断点续传）
 	ScrambleID   int    `json:"scramble_id"`   // 默认切图阈值，可被阅读页响应覆盖
 
+	// CacheTTLDays 资源缓存（output/.cache 下的封面/头像/勋章/表情）的保留天数。
+	//
+	// 0（默认）= 永不清理，保持与旧版本一致的行为。缓存内容全部是可重新
+	// 下载的派生数据，删掉没有任何不可恢复的损失。大于 0 时，进程启动阶段
+	// 会把目录里修改时间早于该天数的文件删掉 —— 选在启动时做是因为此刻
+	// 尚无任何渲染在跑，删除不会与在途请求竞争（渲染层按路径直接读这些文件）。
+	CacheTTLDays int `json:"cache_ttl_days"`
+
 	// ---- PDF ----
 	PDFPassword      string  `json:"pdf_password"`        // 用户密码，空则不加密
 	PDFOwnerPassword string  `json:"pdf_owner_password"`  // 所有者密码，空则与用户密码相同
@@ -117,6 +125,7 @@ func Default() *Config {
 		MaxRetries:          3,
 		SkipExisting:        true,
 		ScrambleID:          DefaultScrambleID,
+		CacheTTLDays:        0,
 		PDFMaxPageHeight:    DefaultPDFMaxPageHeightPt,
 		PDFLayout:           "single",
 		PDFPerImageBookmark: true,

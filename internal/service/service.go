@@ -82,6 +82,9 @@ func New(store *config.Store) *Service {
 	s := &Service{cfg: store}
 	// 字体是可选的：没有字体时渲染类命令会给出明确报错，其余命令不受影响。
 	s.syncFonts(store.Get())
+	// 缓存清理必须放在启动阶段：此刻没有任何渲染在跑，删除不会与在途
+	// 请求竞争。cache_ttl_days = 0（默认）时它什么都不做。
+	PruneCacheAtStartup(store.Get())
 	return s
 }
 
