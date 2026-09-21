@@ -1,0 +1,52 @@
+# ---------- 构建产物 ----------
+/bin/
+/dist/
+*.exe
+*.test
+*.dll
+*.so
+*.dylib
+
+# ---------- 测试与性能剖析 ----------
+coverage.out
+coverage.html
+*.coverprofile
+*.prof
+*.pprof
+
+# ---------- 运行时产物 ----------
+# 下载目录 / 输出目录 / 渲染素材缓存（结构见 README「产物目录结构」）。
+# 默认值分别是 download / output，见 config.Default()。
+/download/
+/raw/
+/output/
+.cache/
+
+# 本机配置：可能含代理地址、固定线路等个人设置。
+# 仓库只提供 config.example.json，真实配置一律不入库。
+config.json
+
+# ---------- 临时与验证残留 ----------
+# 落盘统一走「先写 <目标>.part，成功后再 rename」，
+# 进程被强杀时会在目标目录留下 .part；合并 PDF 留下的则是 .tmp-*；
+# config.Save 写回配置时用的是 config.json.tmp。
+*.part
+*.tmp
+*.tmp-*
+*.bak
+
+# 端到端验证时随手建的临时目录（_verify<作品号>/ 这类）
+_verify*/
+
+# ---------- 编辑器 / 操作系统 ----------
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---------- 开发辅助目录 ----------
+# 项目记忆、一次性探针脚本等，不属于源码
+/.workbuddy/

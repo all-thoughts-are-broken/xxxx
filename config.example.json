@@ -1,0 +1,26 @@
+{
+  "proxy": "",
+  "base_url": "",
+  "cdn_host": "",
+  "app_version": "1.8.0",
+  "secret": "185Hcomic3PAPP7R",
+  "user_agent": "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Mobile Safari/537.36",
+  "timeout_sec": 30,
+  "probe_aid": 10086,
+
+  "download_dir": "download",
+  "output_dir": "output",
+  "workers": 4,
+  "max_retries": 3,
+  "skip_existing": true,
+  "scramble_id": 220980,
+
+  "pdf_password": "",
+  "pdf_owner_password": "",
+  "pdf_max_page_height": 0,
+  "pdf_layout": "single",
+  "pdf_per_image_bookmark": true,
+
+  "font_regular": "fonts/NotoSansSC-Regular.ttf",
+  "font_bold": "fonts/Noto-Sans-SC-Bold-2.ttf"
+}

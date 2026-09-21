@@ -1,0 +1,100 @@
+name: Release
+
+# 推一个 v* 标签即出全平台产物；也可以在 Actions 页面手动触发（手动触发时
+# 需要一个已存在的标签，否则发布步骤拿不到版本号）。
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: 构建 ${{ matrix.goos }}/${{ matrix.goarch }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { goos: linux,   goarch: amd64, ext: "" }
+          - { goos: linux,   goarch: arm64, ext: "" }
+          - { goos: windows, goarch: amd64, ext: ".exe" }
+          - { goos: darwin,  goarch: amd64, ext: "" }
+          - { goos: darwin,  goarch: arm64, ext: "" }
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      # 纯 Go 依赖（imaging / gofpdf / pdfcpu 均无 cgo），所以可以关掉 cgo
+      # 直接交叉编译。开 cgo 会让每个平台都必须在对应系统上原生构建。
+      - name: 构建
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: "0"
+        run: |
+          go build -trimpath -ldflags "-s -w" -o "dist/xxxx${{ matrix.ext }}" ./cmd
+
+      - name: 打包
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME#v}"
+          NAME="xxxx_${VERSION}_${{ matrix.goos }}_${{ matrix.goarch }}"
+          STAGE="dist/${NAME}"
+
+          mkdir -p "${STAGE}/fonts"
+          cp "dist/xxxx${{ matrix.ext }}" "${STAGE}/"
+          cp config.example.json README.md README.en.md LICENSE "${STAGE}/"
+          cp fonts/*.ttf fonts/README.md fonts/LICENSE-OFL.txt "${STAGE}/fonts/"
+
+          cd dist
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            zip -q -r "${NAME}.zip" "${NAME}"
+          else
+            tar -czf "${NAME}.tar.gz" "${NAME}"
+          fi
+          rm -rf "${NAME}"
+          ls -la
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: xxxx-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: |
+            dist/*.tar.gz
+            dist/*.zip
+          if-no-files-found: error
+
+  release:
+    name: 发布
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: 生成校验和
+        run: |
+          set -euo pipefail
+          cd dist
+          ls -la
+          sha256sum *.tar.gz *.zip > checksums.txt
+          cat checksums.txt
+
+      - name: 创建 Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          gh release create "${GITHUB_REF_NAME}" \
+            --title "${GITHUB_REF_NAME}" \
+            --generate-notes \
+            dist/*.tar.gz dist/*.zip dist/checksums.txt
