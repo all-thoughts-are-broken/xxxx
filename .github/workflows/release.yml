@@ -92,6 +92,8 @@ jobs:
       - name: 创建 Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # 本 job 不 checkout 仓库，gh 需要显式指定目标仓库才能工作
+          GH_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
           gh release create "${GITHUB_REF_NAME}" \
