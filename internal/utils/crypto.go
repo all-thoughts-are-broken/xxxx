@@ -146,7 +146,9 @@ func imageBaseName(nameOrPath string) string {
 	if i := strings.IndexAny(s, "?#"); i >= 0 {
 		s = s[:i]
 	}
-	// URL 统一成分隔符，filepath.Base 在 Windows 上不认 '/'
+	// 分隔符统一成 '/'：filepath.Base 是平台相关的 —— Windows 版认 '\' 不认
+	// '/'，Linux/macOS 版正相反。先归一，后面无论在哪台机器上跑行为都一致。
+	s = strings.ReplaceAll(s, "\\", "/")
 	if strings.Contains(s, "/") {
 		s = s[strings.LastIndex(s, "/")+1:]
 	}
